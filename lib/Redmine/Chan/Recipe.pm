@@ -2,7 +2,7 @@ package Redmine::Chan::Recipe;
 use strict;
 use warnings;
 
-use Encode qw/decode/;
+use Encode qw/decode encode/;
 
 use Class::Accessor::Lite (
     new => 1,
@@ -14,23 +14,40 @@ sub cook {
     my $irc     = $args{irc} or return;
     my $ircmsg  = $args{ircmsg} or return;
     my $channel = $self->channel($args{channel}) or return;
+    my $api     = $self->api;
     my $msg     = $ircmsg->{params}[1];
-    $msg = decode $channel->{charset} || 'iso-2022-jp', $msg;
+    my $charset = $channel->{charset} || 'iso-2022-jp';
+    $msg = decode $charset, $msg;
 
     # 1行バッファにためる
     $self->{buffer} = $msg;
 
-    # $irc->send_msg("PRIVMSG", $channel, $msg);
-
+    # TODO
     # issue 登録
-    # issue 確認
-    # 
+
+    my $reply = '';
+    if ($msg =~ /\#(\d+)/) {
+        # issue 確認
+        my $issue_id = $1;
+        $reply = $api->issue_detail($issue_id);
+    }
+
+    if (1) {
+    } else {
+        # 何もしない
+        return;
+    }
+    $reply or return;
+    $reply = encode $charset, $reply;
+    return $reply;
 }
 
 sub channel {
     my $self = shift;
     my $name = shift or return;
-    return $self->channels->{$name};
+    my $channel = $self->channels->{$name};
+    $channel->{name} = $name;
+    return $channel;
 }
 
 1;

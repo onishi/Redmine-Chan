@@ -12,7 +12,17 @@ use Redmine::Chan::API;
 use Redmine::Chan::Recipe;
 
 use Class::Accessor::Lite (
-    rw => [ qw( irc_server irc_port irc_channels irc_password nick redmine_url redmine_api_key api recipe ) ],
+    rw => [ qw(
+        irc_server
+        irc_port
+        irc_channels
+        irc_password
+        nick
+        redmine_url
+        redmine_api_key
+        api
+        recipe
+     ) ],
 );
 
 sub new {
@@ -49,18 +59,19 @@ sub init {
         },
         publicmsg => sub {
             my ($irc, $channel, $ircmsg) = @_;
-            $self->recipe->cook(
+            my $msg = $self->recipe->cook(
                 irc     => $irc,
                 channel => $channel,
                 ircmsg  => $ircmsg,
             );
+            $irc->send_chan($channel, "NOTICE", $channel, $msg) if $msg;
         },
         privatemsg => sub {
             # TODO
             my ($irc, $channel, $ircmsg) = @_;
             my (undef, $who) = $irc->split_nick_mode($ircmsg->{prefix});
             my $msg = $ircmsg->{params}[1];
-            $irc->send_srv("JOIN", $who);
+            #$irc->send_srv("JOIN", $who);
             $irc->send_msg("PRIVMSG", $who, $msg);
         },
     );

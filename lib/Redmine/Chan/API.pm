@@ -7,7 +7,7 @@ use base qw(WebService::Simple);
 use URI;
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key) ],
+    rw  => [ qw(api_key _users _issue_statuses _projects) ],
 );
 
 __PACKAGE__->config(
@@ -15,19 +15,50 @@ __PACKAGE__->config(
     response_parser => 'JSON',
 );
 
+sub base_url {
+    my $self = shift;
+    $self->{base_url} = $_[0] ? URI->new($_[0]) : $self->{base_url};
+}
+
+sub get_data {
+    my $self = shift;
+    my $url  = shift or return;
+    my $key  = shift || $url;
+    return eval { $self->get($url => { key => $self->api_key } )->parse_response->{$key} };
+}
+
 for my $method (qw/users issue_statuses/) {
     no strict 'refs';
     *{ __PACKAGE__ . "\::$method" } = sub {
         my ($self, %param) = @_;
-        return eval {
-            $self->get("${method}.json" => { key => $self->{api_key} } )->parse_response->{$method};
-        };
+        return $self->get_data($method . '.json', $method);
     };
 }
 
-sub base_url {
+sub issue {
     my $self = shift;
-    $self->{base_url} = $_[0] ? URI->new($_[0]) : $self->{base_url};
+    my $issue_id = shift or return;
+    my $issue = $self->get_data("issues/${issue_id}.json", 'issue');
+    return $issue;
+}
+
+sub issue_detail {
+    my $self = shift;
+    my $issue = $self->issue(shift) or return;
+    my $subject = join ' ', map {"[$_]"} grep {$_} (
+        $issue->{subject},
+        $issue->{assigned_to}->{name},
+        $issue->{status}->{name},
+        #$issue->{custom_fields}->[1]->{value},
+    );
+
+    my $uri = $self->base_url->clone;
+    my $authority = $uri->authority;
+    $authority =~ s{^.*?\@}{}; # URLに認証が含まれてたら消す
+    $uri->authority($authority);
+    $uri->path("/issues/$issue->{id}");
+
+    return "$uri : $subject\n";
 }
 
 1;
