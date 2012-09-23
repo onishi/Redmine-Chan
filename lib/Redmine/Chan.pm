@@ -9,9 +9,10 @@ use AnyEvent::IRC::Connection;
 use AnyEvent::IRC::Client;
 
 use Redmine::Chan::API;
+use Redmine::Chan::Recipe;
 
 use Class::Accessor::Lite (
-    rw => [ qw( irc_server irc_port irc_channel irc_password nick redmine_url redmine_api_key ) ],
+    rw => [ qw( irc_server irc_port irc_channel irc_password nick redmine_url redmine_api_key api recipe ) ],
 );
 
 sub new {
@@ -25,18 +26,33 @@ sub init {
     my $self = shift;
     my $cv = AnyEvent->condvar;
     my $irc = AnyEvent::IRC::Client->new;
+    $self->nick($self->nick || 'minechan');
+
+    my $api = Redmine::Chan::API->new;
+    $api->base_url($self->redmine_url);
+    $api->api_key($self->redmine_api_key);
+    $self->api($api);
+
+    my $recipe = Redmine::Chan::Recipe->new(
+        api  => $self->api,
+        nick => $self->nick,
+    );
+    $self->recipe($recipe);
+
     $irc->reg_cb(
-        connect => sub {
-            my ($irc, $err) = @_;
-            if (defined $err) {
-                warn "connect error: $err\n";
-                $cv->send;
-            }
+        registered => sub {
+            print "registered.\n";
+        },
+        disconnect => sub {
+            print "disconnected.\n";
         },
         publicmsg => sub {
             my ($irc, $channel, $ircmsg) = @_;
-            my $msg = $ircmsg->{params}[1];
-            $irc->send_chan($channel, "PRIVMSG", $channel, $msg);
+            $self->recipe->cook(
+                irc     => $irc,
+                channel => $channel,
+                ircmsg  => $ircmsg,
+            );
         },
         privatemsg => sub {
             # TODO
@@ -46,28 +62,19 @@ sub init {
             $irc->send_srv("JOIN", $who);
             $irc->send_msg("PRIVMSG", $who, $msg);
         },
-        registered => sub {
-            print "registered.\n";
-        },
-        disconnect => sub {
-            print "disconnected.\n";
-        },
     );
     $self->{cv}  = $cv;
     $self->{irc} = $irc;
 
-    $self->{api} = Redmine::Chan::API->new;
-    $self->{api}->base_url($self->redmine_url);
-    $self->{api}->api_key($self->redmine_api_key);
 }
 
-sub run {
+sub cook {
     my $self = shift;
     my $cv  = $self->{cv};
     my $irc = $self->{irc};
     my $info = {
-        nick     => $self->nick || 'minechan',
-        real     => $self->nick || 'minechan',
+        nick     => $self->nick,
+        real     => $self->nick,
         password => $self->irc_password,
     };
     my $channel = $self->irc_channel;
@@ -77,7 +84,7 @@ sub run {
     $irc->disconnect;
 }
 
-*cook = \&run;
+*run = \&cook;
 
 1;
 
