@@ -20,11 +20,7 @@ sub cook {
     my $charset = $channel->{charset} || 'iso-2022-jp';
     $msg = decode $charset, $msg;
 
-    # 1行バッファにためる
-    $self->{buffer} = $msg;
-
     # TODO
-    # issue 登録
     # issue に note
     # issue 更新
     # - assign
@@ -35,11 +31,6 @@ sub cook {
     # - 期日
 
     my $reply = '';
-    if ($msg =~ /\#(\d+)/) {
-        # issue 確認
-        my $issue_id = $1;
-        $reply = $api->issue_detail($issue_id);
-    }
 
     # if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
     #     # API サマリ
@@ -55,9 +46,16 @@ sub cook {
         $reply = 'reloaded';
     } elsif ($msg =~ /^\Q$nick\E:?\s+(.+)/) {
         # issue 登録
-        $api->create_issue($1);
+        $reply = $api->create_issue($1, $channel->{project_id});
+    } elsif ($msg =~ /\#(\d+)/) {
+        # issue 確認/update
+        my $issue_id = $1;
+        $api->update_issue($1, $msg);
+        $reply = $api->issue_detail($issue_id);
     } else {
         # 何もしない
+        # 1行バッファにためる
+        $self->{buffer} = $msg;
         return;
     }
     $reply or return;

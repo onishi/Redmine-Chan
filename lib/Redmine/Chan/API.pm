@@ -4,14 +4,16 @@ use warnings;
 
 use base qw(WebService::Simple);
 
+use JSON;
 use URI;
+use Encode qw/decode_utf8/;
 
 my @keys;
 
 BEGIN { @keys = qw/ users issue_statuses projects trackers / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key), map { '_'.$_, $_.'_regexp' } @keys ],
+    rw  => [ qw(api_key), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -58,7 +60,7 @@ sub reload {
         my $cache = '_' . $method;
         my $data = $self->get_data($method);
         $self->$cache($data);
-        my $regexp = $method . '_regexp';
+        my $regexp = $method . '_regexp_hash';
         my $hash;
         for my $item (@$data) {
             # TODO: 自由に指定できるように
@@ -95,25 +97,85 @@ sub issue_detail {
     return "$uri : $subject\n";
 }
 
-sub create_issue {
+sub detect_user_id {
     my $self = shift;
-    my $msg  = shift or return;
-    # my $assigned_to_id = $self->detect_user_id($msg);
-    # my $tracker_id = 2; # デフォルトは機能に
-    # my $res = eval { create_new_issue($project_id, $todo, $assigned_to_id, $tracker_id)->parse_response };
-    # $reply = issue_detail($res->{issue}->{id});
-    # my $res = $self->post(
-    #     'issues.json',
-    #     Content_Type => 'application/json',
-    #     Content => encode_json {
-    #         issue => $issue,
-    #         project_id => $project_id,
-    #         key => $config->{api_key},
-    #     }
-    # );
+    my $msg = shift;
+    my ($user_id, $user_name);
+    for my $name ($msg =~ /[\w\-]{3,}/g) {
+        for my $user (@{$self->users}) {
+            $user->{login} eq $name or next;
+            $user_id = $user->{id};
+            $user_name = $name;
+            last;
+        }
+    }
+    if ($user_id) {
+        $msg =~ s{>?\s*\Q$user_name\E}{};
+    }
+    return ($user_id, $msg);
+}
+
+sub detect_tracker_id {
+    my $self = shift;
+    my $msg = shift;
+    my $hash = $self->trackers_regexp_hash;
+    my $tracker_id;
+    for my $key (keys %{$hash || {}}) {
+        if ($msg =~ s{\b\Q$key\E\b}{}) {
+            $tracker_id = $hash->{$key};
+            last;
+        }
+    }
+    return ($tracker_id, $msg);
+}
+
+sub create_issue {
+    my ($self, $msg, $project_id) = @_;
+    my ($assigned_to_id, $tracker_id);
+    ($assigned_to_id, $msg) = $self->detect_user_id($msg);
+    ($tracker_id, $msg) = $self->detect_tracker_id($msg);
+    $msg =~ s{\s+$}{};
+    length($msg) or return;
+    my $issue = {
+        project_id     => $project_id,
+        subject        => $msg,
+        assigned_to_id => $assigned_to_id,
+        tracker_id     => $tracker_id,
+    };
+
+    my $res = eval { $self->post(
+        'issues.json',
+        Content_Type => 'application/json',
+        Content => encode_json {
+            issue      => $issue,
+            project_id => $project_id,
+            key        => $self->api_key,
+        }
+    )->parse_response };
+    return $self->issue_detail($res->{issue}->{id});
 
 }
 
+sub update_issue {
+    my ($self, $issue_id, $msg) = @_;
+    my ($assigned_to_id, $tracker_id);
+    ($assigned_to_id, $msg) = $self->detect_user_id($msg);
+    ($tracker_id, $msg) = $self->detect_tracker_id($msg);
+    my $issue = {};
+    $issue->{assigned_to_id} = $assigned_to_id if $assigned_to_id;
+    $issue->{tracker_id} = $tracker_id if $tracker_id;
+    scalar %$issue or return;
+    
+    # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
+    return $self->put(
+        $self->base_url . "issues/${issue_id}.json",
+        Content_Type => 'application/json',
+        Content => encode_json {
+            issue => $issue,
+            key   => $self->api_key,
+        },
+    );
+}
 
 1;
 
