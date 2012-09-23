@@ -129,6 +129,20 @@ sub detect_tracker_id {
     return ($tracker_id, $msg);
 }
 
+sub detect_status_id {
+    my $self = shift;
+    my $msg = shift;
+    my $hash = $self->issue_statuses_regexp_hash;
+    my $status_id;
+    for my $key (keys %{$hash || {}}) {
+        if ($msg =~ s{\b\Q$key\E\b}{}) {
+            $status_id = $hash->{$key};
+            last;
+        }
+    }
+    return ($status_id, $msg);
+}
+
 sub create_issue {
     my ($self, $msg, $project_id) = @_;
     my ($assigned_to_id, $tracker_id);
@@ -158,12 +172,14 @@ sub create_issue {
 
 sub update_issue {
     my ($self, $issue_id, $msg) = @_;
-    my ($assigned_to_id, $tracker_id);
+    my ($assigned_to_id, $tracker_id, $status_id);
     ($assigned_to_id, $msg) = $self->detect_user_id($msg);
     ($tracker_id, $msg) = $self->detect_tracker_id($msg);
+    ($status_id, $msg) = $self->detect_status_id($msg);
     my $issue = {};
     $issue->{assigned_to_id} = $assigned_to_id if $assigned_to_id;
     $issue->{tracker_id} = $tracker_id if $tracker_id;
+    $issue->{status_id} = $status_id if $status_id;
     scalar %$issue or return;
     
     # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
