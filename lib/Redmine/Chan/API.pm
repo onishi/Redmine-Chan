@@ -11,7 +11,7 @@ my @keys;
 BEGIN { @keys = qw/ users issue_statuses projects trackers / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key), map { '_'.$_ } @keys ],
+    rw  => [ qw(api_key), map { '_'.$_, $_.'_regexp' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -41,13 +41,31 @@ for my $method (@keys) {
         return $self->$cache() if $self->$cache();
         return $self->$cache( $self->get_data($method) );
     };
+    *{ __PACKAGE__ . "\::${method}_summary" } = sub {
+        my ($self, %param) = @_;
+        my $data = $self->$method;
+        my $summary;
+        for my $item (sort {$a->{id} <=> $b->{id}} @$data) {
+            $summary .= sprintf "%d : %s\n", $item->{id}, $item->{login} || $item->{name};
+        }
+        return $summary;
+    };
 }
 
 sub reload {
     my $self = shift;
     for my $method (@keys) {
         my $cache = '_' . $method;
-        $self->$cache( $self->get_data($method) );
+        my $data = $self->get_data($method);
+        $self->$cache($data);
+        my $regexp = $method . '_regexp';
+        my $hash;
+        for my $item (@$data) {
+            # TODO: 自由に指定できるように
+            my $re = join '|', map { quotemeta } ($item->{login} || $item->{name});
+            $hash->{$re} = $item->{id};
+        }
+        $self->$regexp($hash);
     }
 }
 
@@ -76,6 +94,26 @@ sub issue_detail {
 
     return "$uri : $subject\n";
 }
+
+sub create_issue {
+    my $self = shift;
+    my $msg  = shift or return;
+    # my $assigned_to_id = $self->detect_user_id($msg);
+    # my $tracker_id = 2; # デフォルトは機能に
+    # my $res = eval { create_new_issue($project_id, $todo, $assigned_to_id, $tracker_id)->parse_response };
+    # $reply = issue_detail($res->{issue}->{id});
+    # my $res = $self->post(
+    #     'issues.json',
+    #     Content_Type => 'application/json',
+    #     Content => encode_json {
+    #         issue => $issue,
+    #         project_id => $project_id,
+    #         key => $config->{api_key},
+    #     }
+    # );
+
+}
+
 
 1;
 

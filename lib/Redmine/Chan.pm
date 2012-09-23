@@ -41,6 +41,7 @@ sub init {
     my $api = Redmine::Chan::API->new;
     $api->base_url($self->redmine_url);
     $api->api_key($self->redmine_api_key);
+    $api->reload;
     $self->api($api);
 
     my $recipe = Redmine::Chan::Recipe->new(

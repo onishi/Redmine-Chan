@@ -15,6 +15,7 @@ sub cook {
     my $ircmsg  = $args{ircmsg} or return;
     my $channel = $self->channel($args{channel}) or return;
     my $api     = $self->api;
+    my $nick    = $self->nick;
     my $msg     = $ircmsg->{params}[1];
     my $charset = $channel->{charset} || 'iso-2022-jp';
     $msg = decode $charset, $msg;
@@ -33,7 +34,6 @@ sub cook {
     # - 表示
     # - 期日
 
-
     my $reply = '';
     if ($msg =~ /\#(\d+)/) {
         # issue 確認
@@ -41,7 +41,21 @@ sub cook {
         $reply = $api->issue_detail($issue_id);
     }
 
-    if (1) {
+    # if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
+    #     # API サマリ
+    #     my $method = $1 . '_summary';
+    #     my $summary = $api->$method;
+    #     $irc->send_long_message(undef, 0, "PRIVMSG\001ACTION", $channel, $summary);
+    #     return;
+    # }
+
+    if ($msg =~ /^reload$/) {
+        # 設定再読み込み
+        $api->reload;
+        $reply = 'reloaded';
+    } elsif ($msg =~ /^\Q$nick\E:?\s+(.+)/) {
+        # issue 登録
+        $api->create_issue($1);
     } else {
         # 何もしない
         return;
