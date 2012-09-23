@@ -12,7 +12,7 @@ use Redmine::Chan::API;
 use Redmine::Chan::Recipe;
 
 use Class::Accessor::Lite (
-    rw => [ qw( irc_server irc_port irc_channel irc_password nick redmine_url redmine_api_key api recipe ) ],
+    rw => [ qw( irc_server irc_port irc_channels irc_password nick redmine_url redmine_api_key api recipe ) ],
 );
 
 sub new {
@@ -34,8 +34,9 @@ sub init {
     $self->api($api);
 
     my $recipe = Redmine::Chan::Recipe->new(
-        api  => $self->api,
-        nick => $self->nick,
+        api      => $self->api,
+        nick     => $self->nick,
+        channels => $self->irc_channels,
     );
     $self->recipe($recipe);
 
@@ -65,7 +66,6 @@ sub init {
     );
     $self->{cv}  = $cv;
     $self->{irc} = $irc;
-
 }
 
 sub cook {
@@ -77,9 +77,10 @@ sub cook {
         real     => $self->nick,
         password => $self->irc_password,
     };
-    my $channel = $self->irc_channel;
     $irc->connect($self->irc_server, $self->irc_port || 6667, $info);
-    $irc->send_srv("JOIN", $channel);
+    for my $name (keys %{$self->irc_channels}) {
+        $irc->send_srv("JOIN", $name);
+    }
     $cv->recv;
     $irc->disconnect;
 }
@@ -98,10 +99,16 @@ Redmine::Chan
 
     use Redmine::Chan;
     my $minechan = Redmine::Chan->new(
-        irc_server      => $irc_server,
-        irc_port        => $irc_port,
-        irc_password    => $irc_password,
-        irc_channel     => $irc_channel,
+        irc_server      => 'irc.example.com', # irc
+        irc_port        => 6667,
+        irc_password    => '',
+        irc_channels    => {
+            '#channel' => { # irc channel name
+                key        => '', # irc channel key
+                project_id => 1,  # redmine project id
+                charset    => 'iso-2022-jp',
+            },
+        },
         redmine_url     => $redmine_url,
         redmine_api_key => $redmine_api_key,
     );

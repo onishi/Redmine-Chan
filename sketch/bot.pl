@@ -10,8 +10,12 @@ my $minechan = Redmine::Chan->new(%{pit_get('redmine', require => {
     irc_server      => '',
     irc_port        => '',
     irc_password    => '',
-    irc_channel     => '',
     redmine_url     => '',
     redmine_api_key => '',
-})});
+})},
+    irc_channels    => {
+        '#onishi'  => { project_id => 6 },
+        '#onitest' => { project_id => 6 },
+    },
+);
 $minechan->cook;
