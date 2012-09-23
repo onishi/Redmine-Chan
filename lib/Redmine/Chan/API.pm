@@ -46,11 +46,11 @@ for my $method (@keys) {
     *{ __PACKAGE__ . "\::${method}_summary" } = sub {
         my ($self, %param) = @_;
         my $data = $self->$method;
-        my $summary;
+        my @summary;
         for my $item (sort {$a->{id} <=> $b->{id}} @$data) {
-            $summary .= sprintf "%d : %s\n", $item->{id}, $item->{login} || $item->{name};
+            push @summary, sprintf "%d : %s", $item->{id}, $item->{login} || $item->{name};
         }
-        return $summary;
+        return join ' , ', @summary;
     };
 }
 

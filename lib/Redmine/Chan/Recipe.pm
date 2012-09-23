@@ -32,13 +32,13 @@ sub cook {
 
     my $reply = '';
 
-    # if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
-    #     # API サマリ
-    #     my $method = $1 . '_summary';
-    #     my $summary = $api->$method;
-    #     $irc->send_long_message(undef, 0, "PRIVMSG\001ACTION", $channel, $summary);
-    #     return;
-    # }
+    if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
+        # API サマリ
+        my $method = $1 . '_summary';
+        my $summary = $api->$method;
+        $irc->send_long_message($charset, 0, "NOTICE", $channel->{name}, encode $charset, $summary);
+        return;
+    }
 
     if ($msg =~ /^reload$/) {
         # 設定再読み込み
