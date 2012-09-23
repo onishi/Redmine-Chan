@@ -6,8 +6,12 @@ use base qw(WebService::Simple);
 
 use URI;
 
+my @keys;
+
+BEGIN { @keys = qw/ users issue_statuses projects trackers / }
+
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key _users _issue_statuses _projects) ],
+    rw  => [ qw(api_key), map { '_'.$_ } @keys ],
 );
 
 __PACKAGE__->config(
@@ -24,25 +28,26 @@ sub get_data {
     my $self = shift;
     my $url  = shift or return;
     my $key  = shift || $url;
+    $url .= '.json' unless $url =~ /[.]json$/;
     my $data = eval { $self->get($url => { key => $self->api_key } )->parse_response } or return;
     return $data->{$key};
 }
 
-for my $method (qw/users issue_statuses projects/) {
+for my $method (@keys) {
     no strict 'refs';
     *{ __PACKAGE__ . "\::$method" } = sub {
         my ($self, %param) = @_;
         my $cache = '_' . $method;
         return $self->$cache() if $self->$cache();
-        return $self->$cache( $self->get_data($method . '.json', $method) );
+        return $self->$cache( $self->get_data($method) );
     };
 }
 
 sub reload {
     my $self = shift;
-    for my $method (qw/users issue_statuses projects/) {
+    for my $method (@keys) {
         my $cache = '_' . $method;
-        $self->$cache( $self->get_data($method . '.json', $method) );
+        $self->$cache( $self->get_data($method) );
     }
 }
 

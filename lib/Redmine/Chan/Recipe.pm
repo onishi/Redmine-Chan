@@ -24,6 +24,15 @@ sub cook {
 
     # TODO
     # issue 登録
+    # issue に note
+    # issue 更新
+    # - assign
+    # - トラッカー
+    # custom_fields
+    # - 更新
+    # - 表示
+    # - 期日
+
 
     my $reply = '';
     if ($msg =~ /\#(\d+)/) {

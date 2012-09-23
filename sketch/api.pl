@@ -19,9 +19,11 @@ $api->api_key($config->{api_key});
 warn Dumper($api->users);
 warn Dumper($api->issue_statuses);
 warn Dumper($api->projects);
+warn Dumper($api->trackers);
 
-$api->reload;
+# $api->reload;
+# warn $api->users;
+# warn $api->issue_statuses;
+# warn $api->projects;
 
-warn $api->users;
-warn $api->issue_statuses;
-warn $api->projects;
+warn Dumper($api->issue(1));
