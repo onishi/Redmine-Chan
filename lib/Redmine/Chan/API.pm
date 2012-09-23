@@ -24,15 +24,26 @@ sub get_data {
     my $self = shift;
     my $url  = shift or return;
     my $key  = shift || $url;
-    return eval { $self->get($url => { key => $self->api_key } )->parse_response->{$key} };
+    my $data = eval { $self->get($url => { key => $self->api_key } )->parse_response } or return;
+    return $data->{$key};
 }
 
-for my $method (qw/users issue_statuses/) {
+for my $method (qw/users issue_statuses projects/) {
     no strict 'refs';
     *{ __PACKAGE__ . "\::$method" } = sub {
         my ($self, %param) = @_;
-        return $self->get_data($method . '.json', $method);
+        my $cache = '_' . $method;
+        return $self->$cache() if $self->$cache();
+        return $self->$cache( $self->get_data($method . '.json', $method) );
     };
+}
+
+sub reload {
+    my $self = shift;
+    for my $method (qw/users issue_statuses projects/) {
+        my $cache = '_' . $method;
+        $self->$cache( $self->get_data($method . '.json', $method) );
+    }
 }
 
 sub issue {
