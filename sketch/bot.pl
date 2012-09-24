@@ -17,5 +17,6 @@ my $minechan = Redmine::Chan->new(%{pit_get('redmine', require => {
         '#onishi'  => { project_id => 6 },
         '#onitest' => { project_id => 6 },
     },
+    issue_fields => [qw/subject assigned_to status 1/],
 );
 $minechan->cook;

@@ -10,10 +10,10 @@ use Encode qw/decode_utf8/;
 
 my @keys;
 
-BEGIN { @keys = qw/ users issue_statuses projects trackers / }
+BEGIN { @keys = qw/ users issue_statuses projects trackers/ }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -81,13 +81,12 @@ sub issue {
 sub issue_detail {
     my $self = shift;
     my $issue = $self->issue(shift) or return;
-    my $subject = join ' ', map {"[$_]"} grep {$_} (
-        $issue->{subject},
-        $issue->{assigned_to}->{name},
-        $issue->{status}->{name},
-        #$issue->{custom_fields}->[1]->{value},
-    );
-
+    my $fiedls = $self->issue_fields || [qw/subject assigned_to status/];
+    my $subject = join ' ', map {"[$_]"} grep {$_} map {
+        warn $_;
+        /^\d+$/ ? $issue->{custom_fields}->[$_]->{value}
+            : ref($issue->{$_}) ? $issue->{$_}->{name} : $issue->{$_}
+    } @$fiedls;
     my $uri = $self->base_url->clone;
     my $authority = $uri->authority;
     $authority =~ s{^.*?\@}{}; # URLに認証が含まれてたら消す

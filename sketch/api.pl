@@ -17,10 +17,11 @@ my $api = Redmine::Chan::API->new();
 $api->base_url($config->{base_url});
 $api->api_key($config->{api_key});
 
-$api->reload;
-#$api->create_issue('hogehoge onishi 機能');
+warn $api->issue_detail(1030);
+# $api->reload;
+# $api->create_issue('hogehoge onishi 機能');
 
-warn $api->users_summary;
+# warn $api->users_summary;
 # warn $api->trackers_summary;
 # warn $api->issue_statuses_summary;
 # warn $api->projects_summary;
