@@ -60,10 +60,12 @@ sub init {
         },
         publicmsg => sub {
             my ($irc, $channel, $ircmsg) = @_;
+            my (undef, $who) = $irc->split_nick_mode($ircmsg->{prefix});
             my $msg = $self->recipe->cook(
                 irc     => $irc,
                 channel => $channel,
                 ircmsg  => $ircmsg,
+                who     => $who,
             );
             $irc->send_chan($channel, "NOTICE", $channel, $msg) if $msg;
         },

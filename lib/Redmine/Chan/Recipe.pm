@@ -13,6 +13,7 @@ sub cook {
     my ($self, %args) = @_;
     my $irc     = $args{irc} or return;
     my $ircmsg  = $args{ircmsg} or return;
+    my $who     = $args{who} or return;
     my $channel = $self->channel($args{channel}) or return;
     my $api     = $self->api;
     my $nick    = $self->nick;
@@ -21,10 +22,9 @@ sub cook {
     $msg = decode $charset, $msg;
 
     # TODO
-    # issue に note
     # issue 更新
-    # - assign
-    # - トラッカー
+    # - 優先度
+    # - 期日
     # custom_fields
     # - 更新
     # - 表示
@@ -47,10 +47,16 @@ sub cook {
     } elsif ($msg =~ /^\Q$nick\E:?\s+(.+)/) {
         # issue 登録
         $reply = $api->create_issue($1, $channel->{project_id});
+    } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/) {
+        # note 追加
+        my ($note, $issue_id) = ($1, $2);
+        warn "$who $note";
+        $api->note_issue($issue_id, $note);
+        $reply = $api->issue_detail($issue_id);
     } elsif ($msg =~ /\#(\d+)/) {
         # issue 確認/update
         my $issue_id = $1;
-        $api->update_issue($1, $msg);
+        $api->update_issue($issue_id, $msg);
         $reply = $api->issue_detail($issue_id);
     } else {
         # 何もしない

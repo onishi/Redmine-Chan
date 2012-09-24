@@ -181,13 +181,27 @@ sub update_issue {
     $issue->{tracker_id} = $tracker_id if $tracker_id;
     $issue->{status_id} = $status_id if $status_id;
     scalar %$issue or return;
-    
+
     # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
     return $self->put(
         $self->base_url . "issues/${issue_id}.json",
         Content_Type => 'application/json',
         Content => encode_json {
             issue => $issue,
+            key   => $self->api_key,
+        },
+    );
+}
+
+sub note_issue {
+    my ($self, $issue_id, $note) = @_;
+
+    # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
+    return $self->put(
+        $self->base_url . "issues/${issue_id}.json",
+        Content_Type => 'application/json',
+        Content => encode_json {
+            issue => {notes => $note},
             key   => $self->api_key,
         },
     );
