@@ -155,16 +155,13 @@ sub detect_due_date {
 
 sub create_issue {
     my ($self, $msg, $project_id) = @_;
-    my ($assigned_to_id, $tracker_id);
-    ($assigned_to_id, $msg) = $self->detect_user_id($msg);
-    ($tracker_id, $msg) = $self->detect_tracker_id($msg);
-    $msg =~ s{\s+$}{};
+    my $issue = {};
+    ($msg, $issue) = $self->detect_issue($msg);
     length($msg) or return;
-    my $issue = {
-        project_id     => $project_id,
-        subject        => $msg,
-        assigned_to_id => $assigned_to_id,
-        tracker_id     => $tracker_id,
+    $issue = {
+        %$issue,
+        project_id => $project_id,
+        subject    => $msg,
     };
 
     my $res = eval { $self->post(
@@ -182,16 +179,8 @@ sub create_issue {
 
 sub update_issue {
     my ($self, $issue_id, $msg) = @_;
-    my ($assigned_to_id, $tracker_id, $status_id, $due_date);
-    ($assigned_to_id, $msg) = $self->detect_user_id($msg);
-    ($tracker_id, $msg) = $self->detect_tracker_id($msg);
-    ($status_id, $msg) = $self->detect_status_id($msg);
-    ($due_date, $msg) = $self->detect_due_date($msg);
     my $issue = {};
-    $issue->{assigned_to_id} = $assigned_to_id if $assigned_to_id;
-    $issue->{tracker_id} = $tracker_id if $tracker_id;
-    $issue->{status_id} = $status_id if $status_id;
-    $issue->{due_date} = $due_date if $due_date;
+    ($msg, $issue) = $self->detect_issue($msg);
     scalar %$issue or return;
 
     # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
@@ -203,6 +192,22 @@ sub update_issue {
             key   => $self->api_key,
         },
     );
+}
+
+sub detect_issue {
+    my ($self, $msg) = @_;
+    my ($assigned_to_id, $tracker_id, $status_id, $due_date);
+    ($assigned_to_id, $msg) = $self->detect_user_id($msg);
+    ($tracker_id, $msg)     = $self->detect_tracker_id($msg);
+    ($status_id, $msg)      = $self->detect_status_id($msg);
+    ($due_date, $msg)       = $self->detect_due_date($msg);
+    $msg =~ s{\s+$}{};
+    my $issue = {};
+    $issue->{assigned_to_id} = $assigned_to_id if $assigned_to_id;
+    $issue->{tracker_id} = $tracker_id if $tracker_id;
+    $issue->{status_id} = $status_id if $status_id;
+    $issue->{due_date} = $due_date if $due_date;
+    return ($msg, $issue);
 }
 
 sub note_issue {
