@@ -7,6 +7,7 @@ use Redmine::Chan::API;
 use Data::Dumper;
 use Config::Pit;
 use utf8;
+use JSON::XS;
 
 my $config = pit_get('redmine', require => {
     base_url => 'base_url',
@@ -17,7 +18,26 @@ my $api = Redmine::Chan::API->new();
 $api->base_url($config->{base_url});
 $api->api_key($config->{api_key});
 
-warn $api->issue_detail(1030);
+# my $issue_id = 1038;
+# my $issue = {};
+# $issue->{custom_field_values}->{1} = [5];
+# ##$issue->{custom_field_values}->{2} = 'aaaaa';
+
+# warn encode_json {
+#         issue => $issue,
+#         key   => $api->api_key,
+#     };
+
+# $api->put(
+#     $api->base_url . "issues/${issue_id}.json",
+#     Content_Type => 'application/json',
+#     Content => encode_json {
+#         issue => $issue,
+#         key   => $api->api_key,
+#     },
+# );
+
+# warn $api->issue_detail(1030);
 # $api->reload;
 # $api->create_issue('hogehoge onishi 機能');
 
