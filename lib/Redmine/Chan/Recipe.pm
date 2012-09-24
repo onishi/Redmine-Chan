@@ -38,10 +38,13 @@ sub cook {
         return;
     }
 
-    if ($msg =~ /^reload$/) {
+    if ($msg eq 'reload') {
         # 設定再読み込み
         $api->reload;
         $reply = 'reloaded';
+    } elsif ($msg eq '..') {
+        # 上の行をissue登録
+        $reply = $api->create_issue(delete $self->{buffer} || '', $channel->{project_id});
     } elsif ($msg =~ /^\Q$nick\E:?\s+(.+)/) {
         # issue 登録
         $reply = $api->create_issue($1, $channel->{project_id});
