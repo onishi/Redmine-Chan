@@ -22,12 +22,6 @@ sub cook {
     $api->who($who);
     $msg = decode $charset, $msg;
 
-    # TODO
-    # custom_fields
-    # - 更新
-    # - 表示
-    # - 期日
-
     my $reply = '';
 
     if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
