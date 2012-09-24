@@ -22,9 +22,6 @@ sub cook {
     $msg = decode $charset, $msg;
 
     # TODO
-    # issue 更新
-    # - 優先度
-    # - 期日
     # custom_fields
     # - 更新
     # - 表示

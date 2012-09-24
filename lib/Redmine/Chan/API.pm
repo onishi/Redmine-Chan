@@ -143,6 +143,16 @@ sub detect_status_id {
     return ($status_id, $msg);
 }
 
+sub detect_due_date {
+    my $self = shift;
+    my $msg = shift;
+    my $due_date;
+    if ($msg =~ s|\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b||) {
+        $due_date = sprintf '%04d-%02d-%02d', $1, $2, $3;
+    }
+    return ($due_date, $msg);
+}
+
 sub create_issue {
     my ($self, $msg, $project_id) = @_;
     my ($assigned_to_id, $tracker_id);
@@ -172,14 +182,16 @@ sub create_issue {
 
 sub update_issue {
     my ($self, $issue_id, $msg) = @_;
-    my ($assigned_to_id, $tracker_id, $status_id);
+    my ($assigned_to_id, $tracker_id, $status_id, $due_date);
     ($assigned_to_id, $msg) = $self->detect_user_id($msg);
     ($tracker_id, $msg) = $self->detect_tracker_id($msg);
     ($status_id, $msg) = $self->detect_status_id($msg);
+    ($due_date, $msg) = $self->detect_due_date($msg);
     my $issue = {};
     $issue->{assigned_to_id} = $assigned_to_id if $assigned_to_id;
     $issue->{tracker_id} = $tracker_id if $tracker_id;
     $issue->{status_id} = $status_id if $status_id;
+    $issue->{due_date} = $due_date if $due_date;
     scalar %$issue or return;
 
     # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
