@@ -13,7 +13,7 @@ my @keys;
 BEGIN { @keys = qw/ users issue_statuses projects trackers / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key issue_fields status_commands who), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields status_commands who custom_field_prefix), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -165,6 +165,21 @@ sub detect_due_date {
     return ($due_date, $msg);
 }
 
+sub detect_custom_field_values {
+    my $self = shift;
+    my $msg = shift or return;
+    my $prefix = $self->custom_field_prefix;
+    my $custom_field_values;
+    for my $id (sort keys %$prefix) {
+        my $re = join '|', map { quotemeta } @{$prefix->{$id} || []};
+        if ($msg =~ s{\b$re(\S+)}{}) {
+            $custom_field_values->{$id} = $1;
+            last;
+        }
+    }
+    return ($custom_field_values, $msg);
+}
+
 sub create_issue {
     my ($self, $msg, $project_id) = @_;
     my $issue = {};
@@ -195,6 +210,9 @@ sub update_issue {
     ($msg, $issue) = $self->detect_issue($msg);
     scalar %$issue or return;
 
+    use Data::Dumper;
+    warn Dumper $issue;
+
     # XXX: WebService::Simple に put 実装されてないので LWP::UserAgent の put 叩いてる
     return $self->put(
         $self->base_url . "issues/${issue_id}.json",
@@ -208,17 +226,20 @@ sub update_issue {
 
 sub detect_issue {
     my ($self, $msg) = @_;
-    my ($assigned_to_id, $tracker_id, $status_id, $due_date);
-    ($assigned_to_id, $msg) = $self->detect_user_id($msg);
-    ($tracker_id, $msg)     = $self->detect_tracker_id($msg);
-    ($status_id, $msg)      = $self->detect_status_id($msg);
-    ($due_date, $msg)       = $self->detect_due_date($msg);
+    $msg or return;
+    my ($assigned_to_id, $tracker_id, $status_id, $due_date, $custom_field_values);
+    ($assigned_to_id, $msg)      = $self->detect_user_id($msg);
+    ($tracker_id, $msg)          = $self->detect_tracker_id($msg);
+    ($status_id, $msg)           = $self->detect_status_id($msg);
+    ($due_date, $msg)            = $self->detect_due_date($msg);
+    ($custom_field_values, $msg) = $self->detect_custom_field_values($msg);
     $msg =~ s{\s+$}{};
     my $issue = {};
-    $issue->{assigned_to_id} = $assigned_to_id if $assigned_to_id;
-    $issue->{tracker_id} = $tracker_id if $tracker_id;
-    $issue->{status_id} = $status_id if $status_id;
-    $issue->{due_date} = $due_date if $due_date;
+    $issue->{assigned_to_id}      = $assigned_to_id if $assigned_to_id;
+    $issue->{tracker_id}          = $tracker_id if $tracker_id;
+    $issue->{status_id}           = $status_id if $status_id;
+    $issue->{due_date}            = $due_date if $due_date;
+    $issue->{custom_field_values} = $custom_field_values if $custom_field_values;
     return ($msg, $issue);
 }
 

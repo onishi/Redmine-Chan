@@ -26,6 +26,9 @@ my $minechan = Redmine::Chan->new(%{pit_get('redmine', require => {
         7 => [qw/レビューしました/], # リリース待ち
         6 => [qw/done/], # 終了
     },
+    custom_field_prefix => {
+        2 => [qw(origin/)], # branch
+    },
     issue_fields => [qw/subject assigned_to status 1/],
 );
 $minechan->cook;
