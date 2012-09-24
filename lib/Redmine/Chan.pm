@@ -77,7 +77,8 @@ sub init {
             # TODO
             my ($irc, $channel, $ircmsg) = @_;
             my (undef, $who) = $irc->split_nick_mode($ircmsg->{prefix});
-            my $msg = $ircmsg->{params}[1];
+            my $key = $ircmsg->{params}[1];
+            my $msg = $api->set_api_key($who, $key);
             $irc->send_msg("PRIVMSG", $who, $msg);
         },
     );

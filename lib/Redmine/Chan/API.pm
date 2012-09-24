@@ -10,10 +10,10 @@ use Encode qw/decode_utf8/;
 
 my @keys;
 
-BEGIN { @keys = qw/ users issue_statuses projects trackers/ }
+BEGIN { @keys = qw/ users issue_statuses projects trackers / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key issue_fields status_commands), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields status_commands who), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -26,12 +26,25 @@ sub base_url {
     $self->{base_url} = $_[0] ? URI->new($_[0]) : $self->{base_url};
 }
 
+sub set_api_key {
+    my ($self, $who, $key) = @_;
+    $key =~ s{\s+}{}g;
+    $key or return;
+    $self->{member_api_key}->{$who} = $key;
+    return "set key $who : $key";
+}
+
+sub api_key_as {
+    my ($self, $who) = @_;
+    $self->{member_api_key}->{$who || ''} || $self->api_key;
+}
+
 sub get_data {
     my $self = shift;
     my $url  = shift or return;
     my $key  = shift || $url;
     $url .= '.json' unless $url =~ /[.]json$/;
-    my $data = eval { $self->get($url => { key => $self->api_key } )->parse_response } or return;
+    my $data = eval { $self->get($url => { key => $self->api_key_as($self->who) } )->parse_response } or return;
     return $data->{$key};
 }
 
@@ -169,7 +182,7 @@ sub create_issue {
         Content => encode_json {
             issue      => $issue,
             project_id => $project_id,
-            key        => $self->api_key,
+            key        => $self->api_key_as($self->who),
         }
     )->parse_response };
     return $self->issue_detail($res->{issue}->{id});
@@ -188,7 +201,7 @@ sub update_issue {
         Content_Type => 'application/json',
         Content => encode_json {
             issue => $issue,
-            key   => $self->api_key,
+            key   => $self->api_key_as($self->who),
         },
     );
 }
@@ -218,7 +231,7 @@ sub note_issue {
         Content_Type => 'application/json',
         Content => encode_json {
             issue => {notes => $note},
-            key   => $self->api_key,
+            key   => $self->api_key_as($self->who),
         },
     );
 }

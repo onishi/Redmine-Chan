@@ -19,6 +19,7 @@ sub cook {
     my $nick    = $self->nick;
     my $msg     = $ircmsg->{params}[1];
     my $charset = $channel->{charset} || 'iso-2022-jp';
+    $api->who($who);
     $msg = decode $charset, $msg;
 
     # TODO
@@ -47,7 +48,6 @@ sub cook {
     } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/) {
         # note 追加
         my ($note, $issue_id) = ($1, $2);
-        warn "$who $note";
         $api->note_issue($issue_id, $note);
         $reply = $api->issue_detail($issue_id);
     } elsif ($msg =~ /\#(\d+)/) {
