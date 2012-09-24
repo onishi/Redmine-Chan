@@ -17,6 +17,16 @@ my $config = pit_get('redmine', require => {
 my $api = Redmine::Chan::API->new();
 $api->base_url($config->{base_url});
 $api->api_key($config->{api_key});
+$api->status_commands({
+    1 => [qw/new/], # 新規
+    2 => [qw/ongoing doing/], # 進行中
+    3 => [qw/レビューお願いします レビューおねがいします/], # レビュー待ち
+    4 => [qw/レビューします/], # レビュー中
+    7 => [qw/レビューしました/], # リリース待ち
+    6 => [qw/done/], # 終了
+});
+
+$api->reload;
 
 # my $issue_id = 1038;
 # my $issue = {};

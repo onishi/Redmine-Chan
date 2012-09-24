@@ -23,6 +23,7 @@ use Class::Accessor::Lite (
         api
         recipe
         issue_fields
+        status_commands
      ) ],
 );
 
@@ -43,6 +44,7 @@ sub init {
     $api->base_url($self->redmine_url);
     $api->api_key($self->redmine_api_key);
     $api->issue_fields($self->issue_fields);
+    $api->status_commands($self->status_commands);
     $api->reload;
     $self->api($api);
 

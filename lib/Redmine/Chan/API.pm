@@ -13,7 +13,7 @@ my @keys;
 BEGIN { @keys = qw/ users issue_statuses projects trackers/ }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key issue_fields), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields status_commands), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -56,6 +56,7 @@ for my $method (@keys) {
 
 sub reload {
     my $self = shift;
+    my $commands = $self->status_commands || {};
     for my $method (@keys) {
         my $cache = '_' . $method;
         my $data = $self->get_data($method);
@@ -63,8 +64,8 @@ sub reload {
         my $regexp = $method . '_regexp_hash';
         my $hash;
         for my $item (@$data) {
-            # TODO: 自由に指定できるように
-            my $re = join '|', map { quotemeta } ($item->{login} || $item->{name});
+            my @commands = $method eq 'issue_statuses' ? @{$commands->{$item->{id}} || []} : ();
+            my $re = join '|', map { quotemeta } ($item->{login} || $item->{name}), @commands;
             $hash->{$re} = $item->{id};
         }
         $self->$regexp($hash);
@@ -83,7 +84,6 @@ sub issue_detail {
     my $issue = $self->issue(shift) or return;
     my $fiedls = $self->issue_fields || [qw/subject assigned_to status/];
     my $subject = join ' ', map {"[$_]"} grep {$_} map {
-        warn $_;
         /^\d+$/ ? $issue->{custom_fields}->[$_]->{value}
             : ref($issue->{$_}) ? $issue->{$_}->{name} : $issue->{$_}
     } @$fiedls;
@@ -134,7 +134,7 @@ sub detect_status_id {
     my $hash = $self->issue_statuses_regexp_hash;
     my $status_id;
     for my $key (keys %{$hash || {}}) {
-        if ($msg =~ s{\b\Q$key\E\b}{}) {
+        if ($msg =~ s{\b($key)\b}{}) {
             $status_id = $hash->{$key};
             last;
         }
