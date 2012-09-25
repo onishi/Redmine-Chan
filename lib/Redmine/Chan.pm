@@ -131,6 +131,15 @@ Redmine::Chan
         },
         redmine_url     => $redmine_url,
         redmine_api_key => $redmine_api_key,
+
+        # optional config
+        status_commands => {
+            1 => [qw/hoge/], # change status command
+        },
+        custom_field_prefix => {
+            1 => [qw(prefix)], # prefix to change custome field
+        },
+        issue_fields => [qw/subject/], # displayed issue fields
     );
     $minechan->cook;
 
