@@ -47,7 +47,6 @@ sub init {
     $api->issue_fields($self->issue_fields);
     $api->status_commands($self->status_commands);
     $api->custom_field_prefix($self->custom_field_prefix);
-    $api->reload;
     $self->api($api);
 
     my $recipe = Redmine::Chan::Recipe->new(
@@ -90,6 +89,8 @@ sub init {
 
 sub cook {
     my $self = shift;
+
+    $self->api->reload;
     my $cv  = $self->{cv};
     my $irc = $self->{irc};
     my $info = {
