@@ -132,7 +132,7 @@ sub issues {
 sub issues_summary {
     my ($self, %args) = @_;
 
-    join "\n", map {$self->issue_detail($_->{id})} @{$self->issues(%args)};
+    (join "\n", map {$self->issue_detail($_->{id})} @{$self->issues(%args)}) || 'You have no issues.';
 }
 
 sub detect_user_id {
