@@ -28,7 +28,7 @@ sub cook {
         # API サマリ
         my $method = $1 . '_summary';
         my $summary = $api->$method;
-        $irc->send_long_message($charset, 0, "NOTICE", $channel->{name}, encode $charset, $summary);
+        $irc->send_long_message($charset, 0, "NOTICE", $channel->{name}, $summary);
         return;
     }
 
