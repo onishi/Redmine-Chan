@@ -25,6 +25,7 @@ use Class::Accessor::Lite (
         issue_fields
         status_commands
         custom_field_prefix
+        custom_users
      ) ],
 );
 
@@ -47,6 +48,7 @@ sub init {
     $api->issue_fields($self->issue_fields);
     $api->status_commands($self->status_commands);
     $api->custom_field_prefix($self->custom_field_prefix);
+    $api->custom_users($self->custom_users);
     $self->api($api);
 
     my $recipe = Redmine::Chan::Recipe->new(

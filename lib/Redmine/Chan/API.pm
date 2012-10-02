@@ -13,7 +13,7 @@ my @keys;
 BEGIN { @keys = qw/ users issue_statuses trackers projects / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key issue_fields status_commands who custom_field_prefix), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields status_commands who custom_field_prefix custom_users), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -58,7 +58,11 @@ for my $method (@keys) {
     };
     *{ __PACKAGE__ . "\::${method}_summary" } = sub {
         my ($self, %param) = @_;
-        my $data = $self->$method;
+        my $data = $self->$method || [];
+        if ($method eq 'users') {
+            my $d = $self->custom_users || [];
+            push @$data, @$d;
+        }
         my @summary;
         for my $item (sort {$a->{id} <=> $b->{id}} @$data) {
             push @summary, sprintf "%d : %s", $item->{id}, $item->{login} || $item->{name};
@@ -113,12 +117,19 @@ sub detect_user_id {
     my $self = shift;
     my $msg = shift;
     my ($user_id, $user_name);
+
+    my @users = (@{$self->users || []}, @{$self->custom_users || []});
     for my $name ($msg =~ /[\w\-]{3,}/g) {
-        for my $user (@{$self->users}) {
-            $user->{login} eq $name or next;
-            $user_id = $user->{id};
-            $user_name = $name;
-            last;
+        my $lc_name = lc $name;
+        for my $user (@users) {
+            if (
+                ($user->{login} && lc($user->{login}) eq lc($name)) ||
+                ($user->{nick}  && lc($user->{nick})  eq lc($name))
+            ) {
+                $user_id = $user->{id};
+                $user_name = $name;
+                last;
+            }
         }
     }
     if ($user_id) {
