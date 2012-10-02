@@ -113,6 +113,28 @@ sub issue_detail {
     return "$uri : $subject\n";
 }
 
+sub issues {
+    my ($self, %args) = @_;
+    my $nick        = $args{nick};
+    my $project_id  = $args{project_id};
+
+    my ($user_id) = $self->detect_user_id($nick);
+
+    my $data = eval { $self->get('/issues.json' => {
+        key            => $self->api_key_as($self->who),
+        project_id     => $project_id,
+        assigned_to_id => $user_id,
+        limit          => 5,
+    } )->parse_response } or return;
+    return $data->{issues};
+}
+
+sub issues_summary {
+    my ($self, %args) = @_;
+
+    join "\n", map {$self->issue_detail($_->{id})} @{$self->issues(%args)};
+}
+
 sub detect_user_id {
     my $self = shift;
     my $msg = shift;

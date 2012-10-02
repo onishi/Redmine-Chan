@@ -24,10 +24,17 @@ sub cook {
 
     my $reply = '';
 
-    if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
+    if ($msg =~ /^(users|trackers|projects|issue_statuses|issues)$/) {
         # API サマリ
         my $method = $1 . '_summary';
-        my $summary = $api->$method;
+        my @args;
+        if ($method eq 'issues_summary') {
+            @args = (
+                nick        => $who,
+                project_id  => $channel->{project_id},
+            );
+        }
+        my $summary = $api->$method(@args);
         $irc->send_long_message($charset, 0, "NOTICE", $channel->{name}, $summary);
         return;
     }
