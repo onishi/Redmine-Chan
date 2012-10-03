@@ -9,6 +9,9 @@ use Class::Accessor::Lite (
     rw  => [ qw( api nick channels ) ],
 );
 
+
+our @COMMANDS = qw/users trackers issue_statuses issues/;
+
 sub cook {
     my ($self, %args) = @_;
     my $irc     = $args{irc} or return;
@@ -24,7 +27,14 @@ sub cook {
 
     my $reply = '';
 
-    if ($msg =~ /^(users|trackers|projects|issue_statuses|issues)$/) {
+    if ($msg eq 'commands') {
+        my $msg = join ', ', @COMMANDS;
+        $irc->send_chan($channel->{name}, "NOTICE", $channel->{name}, $msg);
+        return;
+    }
+
+    my $com_reg = join '|', map {quotemeta $_} @COMMANDS;
+    if ($msg =~ /^($com_reg)$/) {
         # API サマリ
         my $method = $1 . '_summary';
         my @args;
