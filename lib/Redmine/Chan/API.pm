@@ -10,7 +10,7 @@ use Encode qw/decode_utf8/;
 
 my @keys;
 
-BEGIN { @keys = qw/ users issue_statuses trackers projects / }
+BEGIN { @keys = qw/ users issue_statuses trackers / }
 
 use Class::Accessor::Lite (
     rw  => [ qw(api_key issue_fields status_commands who custom_field_prefix custom_users), map { '_'.$_, $_.'_regexp_hash' } @keys ],
