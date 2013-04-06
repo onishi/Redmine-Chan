@@ -13,7 +13,7 @@ my @keys;
 BEGIN { @keys = qw/ users issue_statuses trackers / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key issue_fields status_commands activity_commands who custom_field_prefix), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields status_commands activity_commands activity_commands_mixed who custom_field_prefix), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -82,6 +82,20 @@ sub reload {
             $hash->{$re} = $item->{id};
         }
         $self->$regexp($hash);
+    }
+
+    {
+        # activity の定義を取得して，既存設定に混ぜ込む
+        my $uri = 'enumerations/TimeEntryActivities.json';
+        my $data = (eval {
+            $self->get( $uri => { key => $self->api_key_as($self->who) } )->parse_response;
+        } || +{})->{time_entry_activities} || [];
+        my %hash = %{$self->activity_commands || +{}};
+        for my $i (@$data) {
+            my ($id, $name) = @$i{qw/id name/};
+            $hash{$id} = [@{$hash{$id} || []}, $name];
+        }
+        $self->activity_commands_mixed(\%hash);
     }
 }
 
@@ -185,7 +199,7 @@ my %activity_id_cache;
 sub detect_activity_id {
     my $self = shift;
     my $act = shift;
-    my $hash = $self->activity_commands;
+    my $hash = $self->activity_commands_mixed;
     my $activity_id = $activity_id_cache{$act};
     return $activity_id  if $activity_id;
     for my $id (%$hash) {
