@@ -45,6 +45,13 @@ sub cook {
     } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/) {
         # note 追加
         my ($note, $issue_id) = ($1, $2);
+        if (my @m = $note =~ /^\s*\[\s*(\d+(?:\.\d+)?|\.\d+)\s+(\S+)(?:\s+(\S+))?\s*\]\s*(.*)$/) {
+            # 作業時間登録
+            my ($hours, $activity, $comments, $note_) = @m;
+            $comments = '' if ! defined $comments;
+            $api->create_time_entry($issue_id, undef, $hours, $activity, $comments);
+            $note = $note_;
+        }
         $api->note_issue($issue_id, $note);
         $reply = $api->issue_detail($issue_id);
     } elsif ($msg =~ /\#(\d+)/) {
