@@ -24,6 +24,28 @@ sub cook {
 
     my $reply = '';
 
+    # ヒアドキュメント
+    if (defined (my $heredoc = $self->{_heredoc}{$who})) {
+        if ($msg eq $heredoc->{term}) {
+            my $doc = join "\n", @{$heredoc->{buffer}};
+            ($msg = $heredoc->{line}) =~ s/<<\s*\S+/$doc/;
+            delete $self->{_heredoc}{$who};
+        }
+        else {
+            push @{$heredoc->{buffer}}, $msg;
+            return;
+        }
+    }
+    elsif ($msg =~ /<<\s*(\S+)/) {
+        $self->{_heredoc}{$who} = {
+            line   => $msg,
+            term   => $1,
+            buffer => [],
+        };
+        my $term = $self->{_heredoc}{$who}{term};
+        return qq{heredoc\@${who}: terminator is "$term"};
+    }
+
     if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
         # API サマリ
         my $method = $1 . '_summary';
