@@ -13,7 +13,7 @@ my @keys;
 BEGIN { @keys = qw/ users issue_statuses trackers / }
 
 use Class::Accessor::Lite (
-    rw  => [ qw(api_key issue_fields status_commands who custom_field_prefix), map { '_'.$_, $_.'_regexp_hash' } @keys ],
+    rw  => [ qw(api_key issue_fields status_commands activity_commands activity_commands_mixed who custom_field_prefix), map { '_'.$_, $_.'_regexp_hash' } @keys ],
 );
 
 __PACKAGE__->config(
@@ -83,6 +83,20 @@ sub reload {
         }
         $self->$regexp($hash);
     }
+
+    {
+        # activity の定義を取得して，既存設定に混ぜ込む
+        my $uri = 'enumerations/TimeEntryActivities.json';
+        my $data = (eval {
+            $self->get( $uri => { key => $self->api_key_as($self->who) } )->parse_response;
+        } || +{})->{time_entry_activities} || [];
+        my %hash = %{$self->activity_commands || +{}};
+        for my $i (@$data) {
+            my ($id, $name) = @$i{qw/id name/};
+            $hash{$id} = [@{$hash{$id} || []}, $name];
+        }
+        $self->activity_commands_mixed(\%hash);
+    }
 }
 
 sub issue {
@@ -97,8 +111,9 @@ sub issue_detail {
     my $issue = $self->issue(shift) or return;
     my $fiedls = $self->issue_fields || [qw/subject assigned_to status/];
     my $subject = join ' ', map {"[$_]"} grep {$_} map {
-        /^\d+$/ ? $issue->{custom_fields}->[$_]->{value}
-            : ref($issue->{$_}) ? $issue->{$_}->{name} : $issue->{$_}
+        if (/^\d+$/) { $issue->{custom_fields}->[$_]->{value} }
+        elsif ( $_ eq 'spent_hours' ) { sprintf '%.2f', $issue->{$_} }
+        else { ref($issue->{$_}) ? $issue->{$_}->{name} : $issue->{$_} }
     } @$fiedls;
     my $uri = $self->base_url->clone;
     my $authority = $uri->authority;
@@ -180,6 +195,25 @@ sub detect_custom_field_values {
     return ($custom_field_values, $msg);
 }
 
+my %activity_id_cache;
+sub detect_activity_id {
+    my $self = shift;
+    my $act = shift;
+    my $hash = $self->activity_commands_mixed;
+    my $activity_id = $activity_id_cache{$act};
+    return $activity_id  if $activity_id;
+    for my $id (%$hash) {
+        my @acts = map decode_utf8($_), @{$hash->{$id} || []};
+        my $re = "^(?:@{[join '|', @acts]})\$";
+        if ($act =~ /$re/) {
+            $activity_id = $id;
+            $activity_id_cache{$act} = $id;
+            last;
+        }
+    }
+    return ($activity_id, $act);
+}
+
 sub create_issue {
     my ($self, $msg, $project_id) = @_;
     my $issue = {};
@@ -241,6 +275,34 @@ sub detect_issue {
     $issue->{due_date}            = $due_date if $due_date;
     $issue->{custom_field_values} = $custom_field_values if $custom_field_values;
     return ($msg, $issue);
+}
+
+sub create_time_entry {
+    my ($self, $issue_id, $date, $hours, $activity, $comments) = @_;
+    my ($activity_id) = $self->detect_activity_id($activity);
+    if (! $activity_id) {
+        warn qq{activity "$activity" could not be mapped to activity_id.};
+    }
+    if (! defined $date) {
+        my @ymd = (localtime(time))[5,4,3];
+        $ymd[0] += 1900;
+        $ymd[1] += 1;
+        $date = sprintf '%04d-%02d-%02d', @ymd;
+    }
+    return $self->post(
+        'time_entries.json',
+        Content_Type => 'application/json',
+        Content => encode_json +{
+            key => $self->api_key_as($self->who),
+            time_entry => {
+                issue_id    => $issue_id,
+                spent_on    => $date,
+                hours       => $hours,
+                activity_id => $activity_id,
+                comments    => $comments,
+            }
+        },
+    );
 }
 
 sub note_issue {
