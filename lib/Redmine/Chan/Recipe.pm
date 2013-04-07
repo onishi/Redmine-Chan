@@ -45,7 +45,7 @@ sub cook {
     } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/) {
         # note 追加
         my ($note, $issue_id) = ($1, $2);
-        if (my @m = $note =~ /^\s*\[\s*(\d+(?:\.\d+)?|\.\d+)\s+(\S+)(?:\s+(\S+))?\s*\]\s*(.*)$/) {
+        if (my @m = $note =~ /^\s*\[\s*(\d+(?:\.\d+)?|\.\d+)\s+(\S+)(?:\s+([\S\n]+))?\s*\]\s*(.*)$/s) {
             # 作業時間登録
             my ($hours, $activity, $comments, $note_) = @m;
             $comments = '' if ! defined $comments;
