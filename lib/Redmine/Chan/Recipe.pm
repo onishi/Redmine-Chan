@@ -64,7 +64,7 @@ sub cook {
     } elsif ($msg =~ /^\Q$nick\E:?\s+(.+)/) {
         # issue 登録
         $reply = $api->create_issue($1, $channel->{project_id});
-    } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/) {
+    } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/s) {
         # note 追加
         my ($note, $issue_id) = ($1, $2);
         $api->note_issue($issue_id, $note);
