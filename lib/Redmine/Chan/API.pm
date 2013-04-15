@@ -96,7 +96,7 @@ sub issue_detail {
     my $self = shift;
     my $issue = $self->issue(shift) or return;
     my $fiedls = $self->issue_fields || [qw/subject assigned_to status/];
-    my $subject = join ' ', map {"[$_]"} grep {$_} map {
+    my $subject = join ' ', map {"[$_]"} grep {defined $_} map {
         /^\d+$/ ? $issue->{custom_fields}->[$_]->{value}
             : ref($issue->{$_}) ? $issue->{$_}->{name} : $issue->{$_}
     } @$fiedls;
