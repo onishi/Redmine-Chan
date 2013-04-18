@@ -24,6 +24,16 @@ sub cook {
 
     my $reply = '';
 
+    # 現在の issue_id
+    if ($msg =~ /\#\./ && defined $self->{_issue_id}{$who}) {
+        my $issue_id = $self->{_issue_id}{$who};
+        $msg =~ s/\#\./#${issue_id}/;
+    }
+    # issue_id を「現在の issue_id」として保持する
+    if ($msg =~ /\#(\d+)/) {
+        $self->{_issue_id}{$who} = $1;
+    }
+
     if ($msg =~ /^(users|trackers|projects|issue_statuses)$/) {
         # API サマリ
         my $method = $1 . '_summary';
@@ -39,9 +49,11 @@ sub cook {
     } elsif ($msg eq '..') {
         # 上の行をissue登録
         $reply = $api->create_issue(delete $self->{buffer} || '', $channel->{project_id});
+        $self->{_issue_id}{$who} = do { $reply =~ m!/issues/(\d+)!; $1 };
     } elsif ($msg =~ /^\Q$nick\E:?\s+(.+)/) {
         # issue 登録
         $reply = $api->create_issue($1, $channel->{project_id});
+        $self->{_issue_id}{$who} = do { $reply =~ m!/issues/(\d+)!; $1 };
     } elsif ($msg =~ /^(.+?)\s*>\s*\#(\d+)$/) {
         # note 追加
         my ($note, $issue_id) = ($1, $2);
