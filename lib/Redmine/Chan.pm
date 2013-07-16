@@ -84,6 +84,12 @@ sub init {
             my $msg = $api->set_api_key($who, $key);
             $irc->send_msg("PRIVMSG", $who, $msg);
         },
+        error => sub {
+            my ($irc, $code, $message, $ircmsg) = @_;
+            warn "$code: $message";
+            $irc->disconnect;
+            exit -1;
+        },
     );
     $self->{cv}  = $cv;
     $self->{irc} = $irc;

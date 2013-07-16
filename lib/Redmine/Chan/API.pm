@@ -100,7 +100,7 @@ sub issue_detail {
     my $self = shift;
     my $issue = $self->issue(shift) or return;
     my $fiedls = $self->issue_fields || [qw/subject assigned_to status/];
-    my $subject = join ' ', map {"[$_]"} grep {$_} map {
+    my $subject = join ' ', map {"[$_]"} grep {defined $_} map {
         /^\d+$/ ? $issue->{custom_fields}->[$_]->{value}
             : ref($issue->{$_}) ? $issue->{$_}->{name} : $issue->{$_}
     } @$fiedls;
@@ -108,7 +108,7 @@ sub issue_detail {
     my $authority = $uri->authority;
     $authority =~ s{^.*?\@}{}; # URLに認証が含まれてたら消す
     $uri->authority($authority);
-    $uri->path($uri->path."issues/$issue->{id}");
+    $uri->path($uri->path . "issues/$issue->{id}");
 
     return "$uri : $subject\n";
 }
